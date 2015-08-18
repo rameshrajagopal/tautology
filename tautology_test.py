@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import unittest
 from tautology import infixToPostfix, evaluateExpr, isTautology, postfixToExpressionTree
+from tautology import evaluateExprFromTree
 from treeNode import TreeNode
 
 class TestInfixToPostfix(unittest.TestCase):
@@ -118,6 +119,35 @@ class TestTautology(unittest.TestCase):
     def test_tautology_divided_by_true_with_expression_and(self):
         expr = '((!a & a) | ((a & b) | (c | d) | (d & e) & (f & g)))'
         self.assertEqual(isTautology(expr), False)
+
+class TestEvaluateExprFromTree(unittest.TestCase):
+    def test_tree_evalute_expr_simple(self):
+        expr = 'a'
+        variableMap = {'a' : 0}
+        postfix = infixToPostfix(expr)
+        root = postfixToExpressionTree(postfix) 
+        self.assertEqual(evaluateExprFromTree(root, variableMap), 0)
+
+    def test_tree_evaluate_expr_true(self):
+        expr = 'a | !a'
+        variableMap = {'a' : 0}
+        postfix = infixToPostfix(expr)
+        root = postfixToExpressionTree(postfix)
+        self.assertEqual(evaluateExprFromTree(root, variableMap), 1)
+
+    def test_tree_evaluate_complex_expr(self):
+        expr = '(a & (!b | b)) | (!a & (!b | b))'
+        variableMap = {'a' : 0, 'b' : 1}
+        postfix = infixToPostfix(expr)
+        root = postfixToExpressionTree(postfix)
+        self.assertEqual(evaluateExprFromTree(root, variableMap), 1)
+
+    def test_tree_evaluate_3var_expr(self):
+        expr = 'a & b | c'
+        variableMap = {'a' : 0, 'b' : 1 , 'c' : 0 }
+        postfix = infixToPostfix(expr)
+        root = postfixToExpressionTree(postfix)
+        self.assertEqual(evaluateExprFromTree(root, variableMap), 0)
 
 #main
 if __name__ == '__main__':

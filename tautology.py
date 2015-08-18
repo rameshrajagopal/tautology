@@ -61,6 +61,32 @@ def infixToPostfix(infix):
         top -= 1
     return postfix
 
+def evaluateExprFromTree(root, variableMap):
+    '''
+       This function evaulates the expression using expression 
+       tree
+       Some optimization over postfix evaluation using expression 
+       tree
+    '''
+    if root:
+        value = root.data
+        if isOperand(value):
+            return variableMap[value]
+        left = evaluateExprFromTree(root.left, variableMap)
+        if value == '!': 
+            return not left
+        elif value == '&' and not left:
+            return False
+        elif value == '|' and left:
+            return True
+        right = evaluateExprFromTree(root.right, variableMap)
+        if value == '&':
+            return left and right
+        elif value == '|':
+            return left or right
+        return True
+    return True
+
 def evaluateExpr(postfix, variableMap):
     '''
         This function expects statement to be postfix expression with 
@@ -104,26 +130,33 @@ def evaluateExpr(postfix, variableMap):
 
 def getVariableMap(statement):
     variableMap = {}
+    uniqueVaraibles = True
     for e in statement:
-        if isOperand(e) and not e in variableMap:
-            variableMap[e] = 0
-    return variableMap
-
+        if isOperand(e):
+            if e in variableMap:
+                uniqueVaraibles = False
+            else:
+                variableMap[e] = 0
+    return (variableMap, uniqueVaraibles)
 
 def isTautology(statement):
     '''
        Determines whether a statement given is a tuatology or not
     @statement - proper infix statement with proper paranthesis 
     '''
-    variableMap = getVariableMap(statement)
+    (variableMap, uniqueVaraibles) = getVariableMap(statement)
+    #optimization step is that if all are unique variables, it won't be tautology
+    if uniqueVaraibles: 
+        return False
     numVariables = len(variableMap)
     postfix = infixToPostfix(statement)
+    root = postfixToExpressionTree(postfix)
     for i in range(pow(2, numVariables)):
         for e in enumerate(variableMap):
             offset = e[0]
             key = e[1]
             variableMap[key] = (i & (1 << offset)) >> offset
-        if not evaluateExpr(postfix, variableMap): 
+        if not evaluateExprFromTree(root, variableMap): 
             return False
     return True
 
