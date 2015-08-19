@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
-import tautology
+from tautology import PropositionStatement
 
 #main
 if __name__ == '__main__':
     while True:
         try:
             expr = input()
-            if tautology.isTautology(expr): 
+            propostionStatement = PropositionStatement(expr)
+            if propostionStatement.isTautology():
                 print ("True")
             else:
                 print ("False")

@@ -1,163 +1,80 @@
 #!/usr/bin/env python
-from treeNode import TreeNode
 
-OPERATORS = ('&', '|', '!', '(', ')')
+from utils import infixToPostfix, postfixToExpressionTree, isOperand
+import logging
 
-def isCloseBracket(s):
-    return s == ')'
+class PropositionStatement(object):
+    def __init__(self, statement):
+        '''
+            This creates a proposition statement object
+        @args
 
-def isOperand(s):
-    return (s >= 'A' and s <= 'Z') or (s >= 'a' and s <= 'z')
+        statement - this has to be a valid infix statement no validation is
+        done 
+        '''
+        self.statement = statement
+        logging.debug (statement)
 
-def postfixToExpressionTree(postfix):
-    exprTreeStack = []
-    for e in postfix: 
-        node = TreeNode(e)
-        if e in OPERATORS:
-            if e == '!':
-                node.left = exprTreeStack.pop()
-            else:
-                node.left  = exprTreeStack.pop()
-                node.right = exprTreeStack.pop()
-        exprTreeStack.append(node)
-    root = exprTreeStack.pop()
-    return root
-
-def infixToPostfix(infix):
-    '''
-        convert infix expression to postfix expression 
-    '''
-    top = -1
-    precedence = {'!': 3, '&' : 2, '|' : 2, '(' : 1}
-    operatorstack = []
-    postfix = ''
-    for s in infix:
-        if s in OPERATORS:
-            if isCloseBracket(s):
-                while operatorstack:
-                    op = operatorstack.pop()
-                    top -= 1
-                    if op == '(':
-                        break
-                    postfix += op
-            else:
-                temp_top = top
-                if s == '(':
-                    operatorstack.append(s)
-                else:
-                    while temp_top > -1:
-                        if operatorstack[temp_top] == '(':
-                            break
-                        if precedence[operatorstack[top]] >= precedence[s]:
-                            postfix += str(operatorstack.pop())
-                            top -= 1
-                        temp_top -= 1
-                    operatorstack.append(s)
-                top += 1
-        elif isOperand(s):
-            postfix += s
-    while operatorstack:
-        postfix += str(operatorstack.pop())
-        top -= 1
-    return postfix
-
-def evaluateExprFromTree(root, variableMap):
-    '''
-       This function evaulates the expression using expression 
-       tree
-       Some optimization over postfix evaluation using expression 
-       tree
-    '''
-    if root:
-        value = root.data
-        if isOperand(value):
-            return variableMap[value]
-        left = evaluateExprFromTree(root.left, variableMap)
-        if value == '!': 
-            return not left
-        elif value == '&' and not left:
-            return False
-        elif value == '|' and left:
-            return True
-        right = evaluateExprFromTree(root.right, variableMap)
-        if value == '&':
-            return left and right
-        elif value == '|':
-            return left or right
-        return True
-    return True
-
-def evaluateExpr(postfix, variableMap):
-    '''
-        This function expects statement to be postfix expression with 
-        values of variables map to variableMap dictionary and it calculates
-        the given expression is true or false based on the values of
-        variableMap
-
-    @postfix - the input statement has to be postfix expression
-    @variableMap - the variables mapped values
-    '''
-    resultStack = []
-    for e in postfix:    
-        if isOperand(e):
-            resultStack.append(e)
-        elif e in OPERATORS:
-            if e == '!':
-                val = resultStack.pop()
-                if isinstance(val, type('str')):
-                    val = variableMap[val]
-                resultStack.append(not val)
-            elif e == '&':
-                valA = resultStack.pop()
-                valB = resultStack.pop()
-                if isinstance(valA, type('str')): 
-                    valA = variableMap[valA]
-                if isinstance(valB, type('str')): 
-                    valB = variableMap[valB]
-                resultStack.append(valA and valB)
-            elif e == '|':
-                valA = resultStack.pop()
-                valB = resultStack.pop()
-                if isinstance(valA, type('str')): 
-                    valA = variableMap[valA]
-                if isinstance(valB, type('str')): 
-                    valB = variableMap[valB]
-                resultStack.append(valA or valB)
-    result = resultStack.pop()
-    if isinstance(result, type('str')):
-        result = variableMap[result]
-    return result 
-
-def getVariableMap(statement):
-    variableMap = {}
-    uniqueVaraibles = True
-    for e in statement:
-        if isOperand(e):
+    def _getVariableMap(self, statement):
+        logging.debug (statement)
+        variableMap = {}
+        uniqueVaraibles = True
+        for e in statement:
+          if isOperand(e):
             if e in variableMap:
                 uniqueVaraibles = False
             else:
                 variableMap[e] = 0
-    return (variableMap, uniqueVaraibles)
+        return (variableMap, uniqueVaraibles)
 
-def isTautology(statement):
-    '''
-       Determines whether a statement given is a tuatology or not
-    @statement - proper infix statement with proper paranthesis 
-    '''
-    (variableMap, uniqueVaraibles) = getVariableMap(statement)
-    #optimization step is that if all are unique variables, it won't be tautology
-    if uniqueVaraibles: 
-        return False
-    numVariables = len(variableMap)
-    postfix = infixToPostfix(statement)
-    root = postfixToExpressionTree(postfix)
-    for i in range(pow(2, numVariables)):
-        for e in enumerate(variableMap):
-            offset = e[0]
-            key = e[1]
-            variableMap[key] = (i & (1 << offset)) >> offset
-        if not evaluateExprFromTree(root, variableMap): 
+    def _evaluateExprTree(self, root, variableMap):
+        '''
+           This function evaulates the expression using expression 
+           tree
+           Some optimization over postfix evaluation using expression 
+           tree
+        '''
+        if root:
+            value = root.data
+            if isOperand(value):
+                return variableMap[value]
+            left = self._evaluateExprTree(root.left, variableMap)
+            if value == '!': 
+                 return not left
+            elif value == '&' and not left:
+                 return False
+            elif value == '|' and left:
+                 return True
+            right = self._evaluateExprTree(root.right, variableMap)
+            if value == '&':
+                 return left and right
+            elif value == '|':
+                 return left or right
+            return True
+        return True
+
+    def isTautology(self):
+        '''
+           Determines whether a statement given is a tuatology or not
+
+        Returns:
+            This function returns whether a given statement is tautology or not
+        '''
+        logging.debug (self.statement)
+        (variableMap, uniqueVaraibles) = self._getVariableMap(self.statement)
+        #optimization step is that if all are unique variables, it won't be tautology
+        logging.debug (variableMap, uniqueVaraibles)
+        if uniqueVaraibles: 
             return False
-    return True
-
-#main
+        numVariables = len(variableMap)
+        postfix = infixToPostfix(self.statement)
+        root = postfixToExpressionTree(postfix)
+        for i in range(pow(2, numVariables)):
+            for e in enumerate(variableMap):
+                offset = e[0]
+                key = e[1]
+                variableMap[key] = (i & (1 << offset)) >> offset
+            if not self._evaluateExprTree(root, variableMap): 
+                return False
+        return True
+    
